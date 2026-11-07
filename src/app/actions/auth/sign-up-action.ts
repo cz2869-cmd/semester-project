@@ -69,33 +69,33 @@ export const signUpAction = async (formData: FormData) => {
     );
   }
 
-  // Check if user exists in auth but not in profiles (deleted account)
-  const serviceRoleClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
+  const serviceRoleKey = process.env.SERVICE_ROLE_KEY;
+  if (serviceRoleKey) {
+    const serviceRoleClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+      }
+    );
 
-  const { data: authUsers } = await serviceRoleClient.auth.admin.listUsers();
-  const existingAuthUser = authUsers.users.find((u) => u.email === email);
+    const { data: authUsers } = await serviceRoleClient.auth.admin.listUsers();
+    const existingAuthUser = authUsers.users.find((u) => u.email === email);
 
-  if (existingAuthUser) {
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", existingAuthUser.id)
-      .single();
+    if (existingAuthUser) {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", existingAuthUser.id)
+        .single();
 
-    if (!existingProfile) {
-      // User exists in auth but not in profiles (deleted account)
-      // Delete the auth user first to allow new signup
-      await serviceRoleClient.auth.admin.deleteUser(existingAuthUser.id);
+      if (!existingProfile) {
+        await serviceRoleClient.auth.admin.deleteUser(existingAuthUser.id);
+      }
     }
   }
 

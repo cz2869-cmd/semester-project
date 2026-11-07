@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FormMessage, type Message } from "@/components/form-message";
+import { EmailSignUpForm } from "@/components/email-sign-up-form";
 import {
   Card,
   CardContent,
@@ -7,8 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import AuthForm from "@/components/auth-form";
-import { ArrowRight } from "lucide-react";
 import { SCHOOL_EMAIL_APEX_DOMAINS } from "@/utils/domain";
 
 export default async function Signup(props: {
@@ -32,39 +31,18 @@ export default async function Signup(props: {
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create an account to get started</CardDescription>
+          <CardDescription>
+            Create an account with a Barnard or Columbia email. Google sign-in
+            is not enabled.
+          </CardDescription>
         </CardHeader>
         <CardContent className="w-full">
-          <div className="space-y-4 w-full">
-            <AuthForm variant="signup" />
-
-            <div className="relative pt-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex  -mt-3 justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or
-                </span>
-              </div>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground pb-4">
-              <Link
-                className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-                href="/sign-up/email"
-              >
-                <span>Continue with email</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link className="text-primary hover:underline" href="/login">
-                Login
-              </Link>
-            </div>
+          <EmailSignUpForm searchParams={searchParams} />
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link className="text-primary hover:underline" href="/login">
+              Login
+            </Link>
           </div>
         </CardContent>
       </Card>
