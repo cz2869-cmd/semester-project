@@ -105,6 +105,14 @@ export default async function RootLayout({
                     */}
                     {user && !user.is_anonymous && <NavigationMenu />}
                     {!user && <ThemeToggle />}
+                    {(!user || user.is_anonymous) && (
+                      <Link
+                        href="/play"
+                        className="text-sm font-medium text-muted-foreground hover:text-primary"
+                      >
+                        Play
+                      </Link>
+                    )}
                     {/* HeaderAuth component */}
                     <div className="flex items-center text-xs sm:text-sm md:text-base">
                       <HeaderAuth user={user} />
@@ -186,6 +194,13 @@ export default async function RootLayout({
 
                   {/* Main Links */}
                   <div className="flex items-center gap-4 sm:gap-6 text-sm sm:text-base">
+                    <Link
+                      href="/play"
+                      className="text-muted-foreground hover:text-foreground transition-colors
+                                 text-xs sm:text-sm md:text-base"
+                    >
+                      Play
+                    </Link>
                     <Link
                       href="/about"
                       className="text-muted-foreground hover:text-foreground transition-colors

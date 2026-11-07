@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Menu, Sparkles, TrendingUp, Heart, Image as ImageIcon } from "lucide-react";
+import { X, Menu, Sparkles, TrendingUp, Heart, Image as ImageIcon, Gamepad2 } from "lucide-react";
 import { UserHeaderMenu } from "./user-header-menu";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,6 +49,11 @@ export default function MobileSlideMenu({
   };
 
   const navItems = [
+    {
+      label: "Play",
+      href: "/play",
+      icon: Gamepad2,
+    },
     {
       label: "New",
       href: "/new",
