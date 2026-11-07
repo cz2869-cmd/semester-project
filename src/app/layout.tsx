@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import HeaderAuth from "@/components/header-auth";
 import NavigationMenu from "@/components/navigation-menu";
+import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { createClient } from "@/utils/supabase/server";
 import { BugReportDialog } from "@/components/bug-report-dialog";
@@ -105,14 +106,9 @@ export default async function RootLayout({
                     */}
                     {user && !user.is_anonymous && <NavigationMenu />}
                     {!user && <ThemeToggle />}
-                    {(!user || user.is_anonymous) && (
-                      <Link
-                        href="/play"
-                        className="text-sm font-medium text-muted-foreground hover:text-primary"
-                      >
-                        Play
-                      </Link>
-                    )}
+                    <Button asChild size="sm" variant="outline">
+                      <Link href="/play">Play</Link>
+                    </Button>
                     {/* HeaderAuth component */}
                     <div className="flex items-center text-xs sm:text-sm md:text-base">
                       <HeaderAuth user={user} />
