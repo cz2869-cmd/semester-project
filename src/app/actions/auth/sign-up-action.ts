@@ -2,7 +2,11 @@
 
 import { headers } from "next/headers";
 
-import { resolveEmailDomainStatus } from "@/utils/domain";
+import {
+  isAllowedSchoolEmail,
+  resolveEmailDomainStatus,
+  SCHOOL_EMAIL_REQUIREMENT_MESSAGE,
+} from "@/utils/domain";
 import { createClient } from "@/utils/supabase/server";
 import { encodedRedirect } from "@/utils/utils";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -23,6 +27,14 @@ export const signUpAction = async (formData: FormData) => {
       "error",
       errorRedirectPath,
       "Email and password are required"
+    );
+  }
+
+  if (!isAllowedSchoolEmail(email)) {
+    return encodedRedirect(
+      "error",
+      errorRedirectPath,
+      SCHOOL_EMAIL_REQUIREMENT_MESSAGE
     );
   }
 
@@ -164,12 +176,11 @@ export const signUpAction = async (formData: FormData) => {
   }
 
   if (!isDomainAllowed) {
-    // Ensure disallowed domains cannot keep an active session
     await supabase.auth.signOut({ scope: "local" });
     return encodedRedirect(
       "error",
       errorRedirectPath,
-      "Your account is pending activation."
+      SCHOOL_EMAIL_REQUIREMENT_MESSAGE
     );
   }
 

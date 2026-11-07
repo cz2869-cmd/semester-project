@@ -55,6 +55,10 @@ export default async function Signin(props: {
                 <span>Continue with Email</span>
                 <ArrowRight className="w-3 h-3" />
               </Link>
+              <p className="mt-3 text-xs">
+                Google is not enabled. Use a Barnard or Columbia email, or
+                enable Email (and Google) in Supabase Auth.
+              </p>
             </div>
           </div>
 

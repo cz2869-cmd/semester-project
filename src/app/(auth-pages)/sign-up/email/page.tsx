@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/ui/password-input";
+import { SchoolEmailForm } from "@/components/school-email-form";
 
 export default async function SignupEmail(props: {
   searchParams: Promise<Message>;
@@ -36,18 +37,21 @@ export default async function SignupEmail(props: {
         <CardHeader>
           <CardTitle className="text-2xl">Sign up with Email</CardTitle>
           <CardDescription>
-            Enter your email and password to create an account.
+            Use a Barnard or Columbia email (@barnard.edu or @columbia.edu).
+            Google is not enabled — create the account with email, and enable
+            Email in Supabase Auth if sign-up is rejected.
           </CardDescription>
         </CardHeader>
         <CardContent className="w-full">
           <div className="space-y-4 w-full">
             {/* Email Sign Up Form */}
-            <form className="flex flex-col gap-6 w-full">
+            <SchoolEmailForm className="flex flex-col gap-6 w-full" action={signUpAction}>
               <div className="grid gap-2 w-full">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   name="email"
-                  placeholder="you@example.com"
+                  type="email"
+                  placeholder="you@barnard.edu"
                   required
                   className="w-full"
                 />
@@ -88,14 +92,11 @@ export default async function SignupEmail(props: {
                   </Label>
                 </div>
               </div>
-              <SubmitButton
-                formAction={signUpAction}
-                pendingText="Signing up..."
-              >
+              <SubmitButton pendingText="Signing up...">
                 Sign up
               </SubmitButton>
               <FormMessage message={searchParams} />
-            </form>
+            </SchoolEmailForm>
           </div>
           <div className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}

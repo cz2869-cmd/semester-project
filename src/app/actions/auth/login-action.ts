@@ -2,12 +2,24 @@
 
 import { redirect } from "next/navigation";
 
+import {
+  isAllowedSchoolEmail,
+  SCHOOL_EMAIL_REQUIREMENT_MESSAGE,
+} from "@/utils/domain";
 import { createClient } from "@/utils/supabase/server";
 import { encodedRedirect } from "@/utils/utils";
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const supabase = await createClient();
+
+  if (!isAllowedSchoolEmail(email)) {
+    return encodedRedirect(
+      "error",
+      "/login-with-email",
+      SCHOOL_EMAIL_REQUIREMENT_MESSAGE
+    );
+  }
 
   // Get the current user (if they're anonymous)
   const {

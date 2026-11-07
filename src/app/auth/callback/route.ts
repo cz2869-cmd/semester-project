@@ -152,6 +152,15 @@ export const GET = async (request: Request) => {
           );
         }
       } else {
+        if (!isDomainAllowed) {
+          await supabase.auth.signOut({ scope: "local" });
+          return NextResponse.redirect(
+            `${origin}/login?error=${encodeURIComponent(
+              "Use a Barnard or Columbia email (@barnard.edu or @columbia.edu)."
+            )}`
+          );
+        }
+
         const { error: insertProfileError } = await supabase
           .from("profiles")
           .insert({
@@ -167,15 +176,6 @@ export const GET = async (request: Request) => {
           return NextResponse.redirect(
             `${origin}/login?error=${encodeURIComponent(
               "Failed to create profile. Please try again."
-            )}`
-          );
-        }
-
-        if (!isDomainAllowed) {
-          await supabase.auth.signOut({ scope: "local" });
-          return NextResponse.redirect(
-            `${origin}/login?error=${encodeURIComponent(
-              "Your account is pending activation."
             )}`
           );
         }

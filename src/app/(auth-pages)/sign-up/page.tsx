@@ -9,19 +9,12 @@ import {
 } from "@/components/ui/card";
 import AuthForm from "@/components/auth-form";
 import { ArrowRight } from "lucide-react";
-import { createClient } from "@/utils/supabase/server";
+import { SCHOOL_EMAIL_APEX_DOMAINS } from "@/utils/domain";
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
 }) {
   const searchParams = await props.searchParams;
-  const supabase = await createClient();
-
-  // Fetch approved domains
-  const { data: domains } = await supabase
-    .from("allowed_signup_domains")
-    .select("apex_domain")
-    .order("apex_domain");
 
   if ("success" in searchParams) {
     return (
@@ -83,8 +76,8 @@ export default async function Signup(props: {
           domains:
         </p>
         <ul className="list-disc list-inside space-y-1">
-          {domains?.map((domain) => (
-            <li key={domain.apex_domain}>{domain.apex_domain}</li>
+          {SCHOOL_EMAIL_APEX_DOMAINS.map((domain) => (
+            <li key={domain}>{domain}</li>
           ))}
         </ul>
       </div>
