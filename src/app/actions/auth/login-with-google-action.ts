@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { SCHOOL_EMAIL_REQUIREMENT_MESSAGE } from "@/utils/domain";
 import { createClient } from "@/utils/supabase/server";
+import { encodedRedirect } from "@/utils/utils";
 
 export const signInWithGoogleAction = async () => {
   const supabase = await createClient();
@@ -26,7 +28,16 @@ export const signInWithGoogleAction = async () => {
 
   if (error) {
     console.error("Error initiating Google sign-in:", error.message);
-    throw new Error("Failed to sign in with Google: " + error.message);
+    const providerDisabled =
+      error.message.toLowerCase().includes("provider") ||
+      error.message.toLowerCase().includes("validation");
+    return encodedRedirect(
+      "error",
+      "/login",
+      providerDisabled
+        ? SCHOOL_EMAIL_REQUIREMENT_MESSAGE
+        : error.message
+    );
   }
 
   return redirect(data.url);

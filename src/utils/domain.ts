@@ -3,6 +3,11 @@ import { parse } from "tldts";
 
 import type { Database } from "@/types/supabase";
 
+export const SCHOOL_EMAIL_APEX_DOMAINS = ["barnard.edu", "columbia.edu"] as const;
+
+export const SCHOOL_EMAIL_REQUIREMENT_MESSAGE =
+  "Use a Barnard or Columbia email (@barnard.edu or @columbia.edu). Google sign-in is not enabled on this project — sign up with email, or enable Email (and Google, if you want it) in Supabase Auth.";
+
 /**
  * Returns the registrable apex domain for a given email or domain string.
  * Uses the public suffix list to correctly handle multi-level TLDs.
@@ -33,6 +38,27 @@ export const getApexDomain = (input: string | null | undefined) => {
 export const getEmailApexDomain = (email: string | null | undefined) =>
   getApexDomain(email);
 
+export const isAllowedSchoolEmail = (email: string | null | undefined) => {
+  if (!email) {
+    return false;
+  }
+
+  const trimmed = email.trim().toLowerCase();
+  const at = trimmed.lastIndexOf("@");
+  if (at <= 0 || at === trimmed.length - 1) {
+    return false;
+  }
+
+  const host = trimmed.slice(at + 1);
+  if (!host || host.includes(" ") || host.includes("@")) {
+    return false;
+  }
+
+  return SCHOOL_EMAIL_APEX_DOMAINS.some(
+    (apex) => host === apex || host.endsWith(`.${apex}`)
+  );
+};
+
 type DomainStatus =
   | {
       apexDomain: string;
@@ -59,26 +85,11 @@ export const resolveEmailDomainStatus = async (
     };
   }
 
-  const normalizedApex = apexDomain.toLowerCase();
-
-  const { data, error } = await supabase
-    .from("allowed_signup_domains")
-    .select("apex_domain")
-    .ilike("apex_domain", normalizedApex)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      apexDomain,
-      isAllowed: false,
-      error,
-    };
-  }
+  void supabase;
 
   return {
     apexDomain,
-    isAllowed: Boolean(data),
+    isAllowed: isAllowedSchoolEmail(email),
     error: null,
   };
 };
