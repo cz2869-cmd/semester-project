@@ -163,36 +163,39 @@ function writeComment(
   seed: string
 ) {
   const rating = `${score}/10`
-  const index = variant(seed, 3)
   const wanted = themeLabel(promptTheme)
+  const pictured = imageTheme ? themeLabel(imageTheme) : 'something random'
 
   if (verdict === 'good') {
     const lines = [
-      `WOW!! ${rating} YES. the prompt is about ${wanted} and this pic MATCHES!!`,
-      `WAIT. ${rating} i SEE the vision. this is actually about ${wanted}!!`,
-      `HELLO?? ${rating} you ate. prompt says ${wanted} and the pic agrees!!`,
+      `WOW!! ${rating} this pic showed up to a ${wanted} prompt and ATE. i'm screaming!!`,
+      `WAIT. ${rating} the ${wanted} assignment has been understood. no crumbs left!!`,
+      `HELLO?? ${rating} you said ${wanted} and the pic said bet. iconic!!`,
     ]
-    return lines[index]
+    return lines[variant(seed, lines.length)]
   }
 
   if (verdict === 'close') {
     const lines = [
-      `hmm. ${rating} the reaction KINDA works, but it's not really about ${wanted}!!`,
-      `okay wait. ${rating} i KINDA see the face. the ${wanted} part is shaky though!!`,
-      `not gonna lie ${rating} close!! the vibe is there, the ${wanted} is not`,
+      `hmm. ${rating} the face is working overtime but the ${wanted} called out. cute try!!`,
+      `okay wait. ${rating} i KINDA see the reaction. the ${wanted} part is on thin ice!!`,
+      `not gonna lie ${rating} the vibe clocked in and the ${wanted} did not. almost!!`,
     ]
-    return lines[index]
+    return lines[variant(seed, lines.length)]
   }
 
-  const mismatch = imageTheme
-    ? `the prompt is about ${wanted} and this pic is giving ${themeLabel(imageTheme)}`
-    : `the prompt is about ${wanted} and this pic does NOT match`
-  const lines = [
-    `yeah no. ${rating} ${mismatch}. i do NOT see the vision`,
-    `bestie. ${rating} ${mismatch}!!`,
-    `i'm actually disappointed lol. ${rating} ${mismatch}`,
-  ]
-  return lines[index]
+  const lines = imageTheme
+    ? [
+        `yeah no. ${rating} the prompt is about ${wanted} and this pic is giving ${pictured}. i do NOT see the vision`,
+        `i'm actually disappointed lol. ${rating} ${wanted} called and this ${pictured} pic did not pick up!!`,
+        `bestie. ${rating} you cannot answer ${wanted} with ${pictured}. the vision left the chat!!`,
+      ]
+    : [
+        `yeah no. ${rating} the prompt is about ${wanted} and this pic is not even in the group chat. i do NOT see the vision`,
+        `i'm actually disappointed lol. ${rating} ${wanted} was the assignment and this pic skipped class!!`,
+        `bestie. ${rating} ${wanted} asked a question and this pic answered with silence. the vision left!!`,
+      ]
+  return lines[variant(seed, lines.length)]
 }
 
 export function judgeMemePick(input: {

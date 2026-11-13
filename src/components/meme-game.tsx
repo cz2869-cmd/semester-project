@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { judgeMemePickAction } from '@/app/actions/game/judge-meme-pick-action'
+import { rateMemeRoastAction } from '@/app/actions/game/rate-meme-roast-action'
 import { fetchCommonUseImagesAction } from '@/app/actions/images'
 import { Button } from '@/components/ui/button'
 import { generateMemePrompt, ROUND_SECONDS } from '@/lib/meme-prompts'
+import { ROAST_REACTIONS, type RoastReaction } from '@/lib/meme-roast-ratings'
 import { cn } from '@/lib/utils'
 
 type Meme = {
@@ -112,6 +114,10 @@ export function MemeGame() {
   const [endsAt, setEndsAt] = useState<number | null>(null)
   const [judgment, setJudgment] = useState<string | null>(null)
   const [judging, setJudging] = useState(false)
+  const [ratingId, setRatingId] = useState<string | null>(null)
+  const [reaction, setReaction] = useState<RoastReaction | null>(null)
+  const [ratingError, setRatingError] = useState<string | null>(null)
+  const [rating, setRating] = useState(false)
   const promptRef = useRef('')
   const selectedRef = useRef<Meme | null>(null)
   const startingRef = useRef(false)
@@ -151,6 +157,9 @@ export function MemeGame() {
       setSecondsLeft(remaining)
       if (Date.now() >= endsAt) {
         setSecondsLeftAtEnd(0)
+        if (selectedRef.current) {
+          setRatingId((current) => current ?? crypto.randomUUID())
+        }
         setPhase(selectedRef.current ? 'locked' : 'missed')
       }
     }
@@ -169,6 +178,10 @@ export function MemeGame() {
     setMemes([])
     setJudgment(null)
     setJudging(false)
+    setRatingId(null)
+    setReaction(null)
+    setRatingError(null)
+    setRating(false)
 
     const nextPrompt = generateMemePrompt(promptRef.current)
 
@@ -200,7 +213,30 @@ export function MemeGame() {
     const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
     setSecondsLeft(remaining)
     setSecondsLeftAtEnd(remaining)
+    setRatingId(crypto.randomUUID())
     setPhase('locked')
+  }
+
+  const rateRoast = async (nextReaction: RoastReaction) => {
+    if (!selected || !ratingId || rating) return
+    setRating(true)
+    setRatingError(null)
+    setReaction(nextReaction)
+    try {
+      const result = await rateMemeRoastAction({
+        clientRatingId: ratingId,
+        imageId: selected.id,
+        prompt,
+        reaction: nextReaction,
+      })
+      setReaction(result.reaction ?? nextReaction)
+      setRatingError(result.ok ? null : result.message)
+    } catch (rateError) {
+      console.error('Failed to rate roast:', rateError)
+      setRatingError('The rating could not be saved.')
+    } finally {
+      setRating(false)
+    }
   }
 
   const urgent = secondsLeft <= 10
@@ -301,10 +337,10 @@ export function MemeGame() {
           />
           <div className="rounded-xl bg-muted px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Judge
+              Roast
             </p>
             {judging || !judgment ? (
-              <p className="mt-1 text-sm text-muted-foreground">Looking at the meme...</p>
+              <p className="mt-1 text-sm text-muted-foreground">The judge is writing a roast...</p>
             ) : (
               <motion.p
                 initial={{ opacity: 0, y: 8 }}
@@ -316,6 +352,26 @@ export function MemeGame() {
               </motion.p>
             )}
           </div>
+          {judgment && !judging ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">How was this roast?</p>
+              <div className="flex flex-wrap gap-2">
+                {ROAST_REACTIONS.map((option) => (
+                  <Button
+                    key={option.id}
+                    type="button"
+                    size="sm"
+                    variant={reaction === option.id ? 'default' : 'outline'}
+                    disabled={rating}
+                    onClick={() => rateRoast(option.id)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              {ratingError ? <p className="text-sm text-destructive">{ratingError}</p> : null}
+            </div>
+          ) : null}
           <Button onClick={startRound} className="self-start">
             Play again
           </Button>

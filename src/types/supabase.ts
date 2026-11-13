@@ -111,6 +111,57 @@ export type Database = {
           },
         ]
       }
+      meme_roast_ratings: {
+        Row: {
+          client_rating_id: string
+          created_at: string
+          id: number
+          image_id: string | null
+          profile_id: string | null
+          prompt: string
+          reaction: string
+          roast: string
+          verdict: string
+        }
+        Insert: {
+          client_rating_id: string
+          created_at?: string
+          id?: number
+          image_id?: string | null
+          profile_id?: string | null
+          prompt: string
+          reaction: string
+          roast: string
+          verdict: string
+        }
+        Update: {
+          client_rating_id?: string
+          created_at?: string
+          id?: number
+          image_id?: string | null
+          profile_id?: string | null
+          prompt?: string
+          reaction?: string
+          roast?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_roast_ratings_image_id_fkey"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "images"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_roast_ratings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caption_examples: {
         Row: {
           caption: string
