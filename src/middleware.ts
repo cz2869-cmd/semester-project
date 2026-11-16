@@ -2,6 +2,30 @@ import { createServerClient } from "@supabase/ssr";
 import { getSupabaseAuthCookieOptions } from "@/utils/supabase/authCookies";
 import { type NextRequest, NextResponse } from "next/server";
 
+function getSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  )?.trim();
+
+  if (!url || !key) {
+    return null;
+  }
+
+  try {
+    // Reject placeholder / malformed values that crash cookie naming.
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith(".supabase.co")) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return { url, key };
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (pathname === "/start" || pathname.startsWith("/start/")) {
@@ -11,11 +35,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions: getSupabaseAuthCookieOptions(process.env.NEXT_PUBLIC_SUPABASE_URL!),
+  const supabaseEnv = getSupabaseEnv();
+
+  if (!supabaseEnv) {
+    console.error(
+      "Middleware: NEXT_PUBLIC_SUPABASE_URL / ANON_KEY missing or invalid"
+    );
+    return response;
+  }
+
+  try {
+    const supabase = createServerClient(supabaseEnv.url, supabaseEnv.key, {
+      cookieOptions: getSupabaseAuthCookieOptions(supabaseEnv.url),
       cookies: {
         getAll() {
           return request.cookies.getAll().map((cookie) => ({
@@ -33,38 +64,41 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Skip checks for public routes
+    if (
+      request.nextUrl.pathname.startsWith("/login") ||
+      request.nextUrl.pathname.startsWith("/sign-up") ||
+      request.nextUrl.pathname.startsWith("/unauthorized")
+    ) {
+      return response;
     }
-  );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Skip checks for public routes
-  if (
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/sign-up") ||
-    request.nextUrl.pathname.startsWith("/unauthorized")
-  ) {
-    return response;
-  }
-
-  // If no user, allow access to public routes
-  if (!user) {
-    return response;
-  }
-
-  // Handle anonymous users
-  if (user.is_anonymous) {
-    // Block access to /new for anonymous users
-    if (request.nextUrl.pathname === "/new") {
-      return NextResponse.redirect(new URL("/login", request.url));
+    // If no user, allow access to public routes
+    if (!user) {
+      return response;
     }
-    // Allow access to other routes for anonymous users
+
+    // Handle anonymous users
+    if (user.is_anonymous) {
+      // Block access to /new for anonymous users
+      if (request.nextUrl.pathname === "/new") {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      // Allow access to other routes for anonymous users
+      return response;
+    }
+
+    return response;
+  } catch (error) {
+    console.error("Middleware Supabase error:", error);
     return response;
   }
-
-  return response;
 }
 
 // Specify which routes to run the middleware on
