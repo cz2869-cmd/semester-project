@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Loader2, Sparkles, Timer, Users } from "lucide-react";
+import { Bot, Heart, Loader2, Sparkles, Timer, Users } from "lucide-react";
 
 import { judgeMemePickAction } from "@/app/actions/game/judge-meme-pick-action";
 import { rateMemeRoastAction } from "@/app/actions/game/rate-meme-roast-action";
@@ -38,6 +38,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const ROUND_MS = ROUND_SECONDS * 1000;
+const REVEAL_SECONDS = 15;
+const REVEAL_MS = REVEAL_SECONDS * 1000;
 const HUMAN_ID = "you";
 const MEMES_PER_ROUND = 24;
 
@@ -59,6 +61,7 @@ type Submission = {
   imageId: string | null;
   score: number;
   judgment: MemeJudgment | null;
+  hearted: boolean;
 };
 
 type Props = { displayName: string };
@@ -85,6 +88,7 @@ export function PlayPageClient({ displayName }: Props) {
     useState<RoastRatingCounts>(emptyRoastCounts());
   const [ratingId, setRatingId] = useState<string | null>(null);
   const [ratingBusy, setRatingBusy] = useState(false);
+  const [revealTimeLeftMs, setRevealTimeLeftMs] = useState(REVEAL_MS);
 
   const captionDraftRef = useRef("");
   const selectedMemeRef = useRef<Meme | null>(null);
@@ -92,6 +96,7 @@ export function PlayPageClient({ displayName }: Props) {
   const botCaptionsRef = useRef<string[]>([]);
   const botPicksRef = useRef<Meme[]>([]);
   const roundStartedAt = useRef<number | null>(null);
+  const revealAdvanceRef = useRef<(force?: boolean) => void>(() => {});
 
   useEffect(() => {
     captionDraftRef.current = captionDraft;
@@ -270,6 +275,7 @@ export function PlayPageClient({ displayName }: Props) {
           imageId: image.id.startsWith("fallback") ? null : image.id,
           score: scoreFromVerdict(humanJudgment.verdict, humanCaption),
           judgment: humanJudgment,
+          hearted: false,
         },
         ...BOT_PLAYERS.map((bot, index) => {
           const caption = botCaptionsRef.current[index] ?? "…";
@@ -281,6 +287,7 @@ export function PlayPageClient({ displayName }: Props) {
             imageId: image.id.startsWith("fallback") ? null : image.id,
             score: scoreFromVerdict(judgment.verdict, `${bot.id}|${caption}`),
             judgment,
+            hearted: false,
           };
         }),
       ];
@@ -293,6 +300,7 @@ export function PlayPageClient({ displayName }: Props) {
         imageId: humanPick?.id ?? null,
         score: humanPick ? 5 : 1,
         judgment: null,
+        hearted: false,
       };
       built = [
         humanBase,
@@ -305,6 +313,7 @@ export function PlayPageClient({ displayName }: Props) {
             imageId: pick?.id ?? null,
             score: 4 + ((index * 2) % 5),
             judgment: null,
+            hearted: false,
           };
         }),
       ];
@@ -364,10 +373,29 @@ export function PlayPageClient({ displayName }: Props) {
     }
   }
 
-  function goNextReveal() {
+  function toggleBotHeart() {
+    const current = revealOrder[revealIndex];
+    if (!current || current.playerId === HUMAN_ID) return;
+
+    const nextHearted = !current.hearted;
+    setRevealOrder((prev) =>
+      prev.map((item, index) =>
+        index === revealIndex ? { ...item, hearted: nextHearted } : item
+      )
+    );
+    setSubmissions((prev) =>
+      prev.map((item) =>
+        item.playerId === current.playerId
+          ? { ...item, hearted: nextHearted }
+          : item
+      )
+    );
+  }
+
+  function goNextReveal(force = false) {
     const current = revealOrder[revealIndex];
     if (!current) return;
-    if (current.playerId === HUMAN_ID) {
+    if (!force && current.playerId === HUMAN_ID) {
       if (judging || !current.judgment) return;
       if (!roastReaction) return;
     }
@@ -379,8 +407,29 @@ export function PlayPageClient({ displayName }: Props) {
     setRoastReaction(null);
   }
 
+  revealAdvanceRef.current = goNextReveal;
+
+  useEffect(() => {
+    if (phase !== "reveal") return;
+
+    const startedAt = Date.now();
+    setRevealTimeLeftMs(REVEAL_MS);
+
+    const tick = window.setInterval(() => {
+      const remaining = Math.max(0, REVEAL_MS - (Date.now() - startedAt));
+      setRevealTimeLeftMs(remaining);
+      if (remaining <= 0) {
+        window.clearInterval(tick);
+        revealAdvanceRef.current(true);
+      }
+    }, 100);
+
+    return () => window.clearInterval(tick);
+  }, [phase, revealIndex]);
+
   const secondsLeft = Math.ceil(timeLeftMs / 1000);
   const timerUrgent = secondsLeft <= 5;
+  const revealSecondsLeft = Math.ceil(revealTimeLeftMs / 1000);
   const currentReveal = revealOrder[revealIndex];
   const currentPlayer = currentReveal
     ? playerById[currentReveal.playerId]
@@ -490,10 +539,22 @@ export function PlayPageClient({ displayName }: Props) {
               <span>
                 Meme {revealIndex + 1} of {revealOrder.length}
               </span>
-              <span>
-                {roundKind === "caption"
-                  ? "Caption battle"
-                  : "Prompt match"}
+              <span className="flex items-center gap-3">
+                <span>
+                  {roundKind === "caption"
+                    ? "Caption battle"
+                    : "Prompt match"}
+                </span>
+                <span
+                  className={cn(
+                    "font-mono tabular-nums",
+                    revealSecondsLeft <= 5
+                      ? "text-destructive"
+                      : "text-foreground"
+                  )}
+                >
+                  {revealSecondsLeft}s
+                </span>
               </span>
             </div>
 
@@ -509,7 +570,7 @@ export function PlayPageClient({ displayName }: Props) {
               showPromptLabel={roundKind === "pick"}
             />
 
-            {currentPlayer.id === HUMAN_ID && (
+            {currentPlayer.id === HUMAN_ID ? (
               <div className="border border-primary/40 bg-primary/5 p-4 space-y-3">
                 <div
                   className="flex items-center gap-2 text-primary text-sm
@@ -564,11 +625,36 @@ export function PlayPageClient({ displayName }: Props) {
                   </div>
                 ) : null}
               </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Leave a heart if you laughed
+                </p>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant={currentReveal.hearted ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={toggleBotHeart}
+                  aria-pressed={currentReveal.hearted}
+                  aria-label={
+                    currentReveal.hearted ? "Unheart meme" : "Heart meme"
+                  }
+                >
+                  <Heart
+                    className={cn(
+                      "w-5 h-5",
+                      currentReveal.hearted && "fill-current"
+                    )}
+                  />
+                  {currentReveal.hearted ? "Hearted" : "Heart"}
+                </Button>
+              </div>
             )}
 
             <div className="flex justify-end">
               <Button
-                onClick={goNextReveal}
+                onClick={() => goNextReveal(false)}
                 disabled={
                   currentPlayer.id === HUMAN_ID &&
                   (judging || !currentReveal.judgment || !roastReaction)
@@ -636,8 +722,17 @@ export function PlayPageClient({ displayName }: Props) {
                               ? " (you)"
                               : ""}
                           </span>
-                          <span className="text-sm tabular-nums">
-                            {submission.score}/10
+                          <span className="flex items-center gap-2 text-sm">
+                            {submission.playerId !== HUMAN_ID &&
+                            submission.hearted ? (
+                              <Heart
+                                className="w-4 h-4 text-primary fill-current"
+                                aria-label="Hearted"
+                              />
+                            ) : null}
+                            <span className="tabular-nums">
+                              {submission.score}/10
+                            </span>
                           </span>
                         </div>
                         {roundKind === "caption" ? (
