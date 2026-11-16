@@ -1,30 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { getSupabaseAuthCookieOptions } from "@/utils/supabase/authCookies";
+import { getSupabasePublicEnv } from "@/utils/supabase/env";
 import { type NextRequest, NextResponse } from "next/server";
-
-function getSupabaseEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  )?.trim();
-
-  if (!url || !key) {
-    return null;
-  }
-
-  try {
-    // Reject placeholder / malformed values that crash cookie naming.
-    const parsed = new URL(url);
-    if (!parsed.hostname.endsWith(".supabase.co")) {
-      return null;
-    }
-  } catch {
-    return null;
-  }
-
-  return { url, key };
-}
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -35,11 +12,14 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  const supabaseEnv = getSupabaseEnv();
+  const supabaseEnv = getSupabasePublicEnv();
 
   if (!supabaseEnv) {
     console.error(
-      "Middleware: NEXT_PUBLIC_SUPABASE_URL / ANON_KEY missing or invalid"
+      "Middleware: NEXT_PUBLIC_SUPABASE_URL / ANON_KEY missing or invalid. " +
+        `url=${Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)} ` +
+        `anon=${Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)} ` +
+        `publishable=${Boolean(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY)}`
     );
     return response;
   }
@@ -70,7 +50,6 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Skip checks for public routes
     if (
       request.nextUrl.pathname.startsWith("/login") ||
       request.nextUrl.pathname.startsWith("/sign-up") ||
@@ -79,18 +58,14 @@ export async function middleware(request: NextRequest) {
       return response;
     }
 
-    // If no user, allow access to public routes
     if (!user) {
       return response;
     }
 
-    // Handle anonymous users
     if (user.is_anonymous) {
-      // Block access to /new for anonymous users
       if (request.nextUrl.pathname === "/new") {
         return NextResponse.redirect(new URL("/login", request.url));
       }
-      // Allow access to other routes for anonymous users
       return response;
     }
 
@@ -101,16 +76,8 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-// Specify which routes to run the middleware on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     "/new",
   ],
